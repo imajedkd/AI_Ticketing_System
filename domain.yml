@@ -1,0 +1,35 @@
+version: "3.1"
+
+intents:
+  - check_shipment_status
+  - create_ticket
+  - inform
+
+entities:
+  - tracking_number
+
+slots:
+  tracking_number:
+    type: text
+    mappings:
+      - type: from_entity
+        entity: tracking_number
+
+responses:
+  utter_ask_tracking_number:
+    - text: "Please provide your tracking number."
+    - text: "يرجى تزويدنا برقم التتبع."
+    
+  utter_ticket_created:
+    - text: "I've created a support ticket for your issue. Our team will contact you soon."
+    - text: "تم إنشاء تذكرة دعم لمشكلتك. سيتواصل معك فريقنا قريباً."
+
+actions:
+  - action_check_shipment
+  - action_create_ticket
+  - utter_ask_tracking_number
+  - utter_ticket_created
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

@@ -1,0 +1,22 @@
+version: "3.1"
+
+stories:
+
+- story: check shipment status happy path
+  steps:
+  - intent: check_shipment_status
+  - action: utter_ask_tracking_number
+  - intent: inform
+    entities:
+    - tracking_number: "SHIP123456"
+  - action: action_check_shipment
+
+- story: create ticket happy path
+  steps:
+  - intent: create_ticket
+  - action: utter_ask_tracking_number
+  - intent: inform
+    entities:
+    - tracking_number: "SHIP123456"
+  - action: action_create_ticket
+  - action: utter_ticket_created

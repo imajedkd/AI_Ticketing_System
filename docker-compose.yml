@@ -1,0 +1,64 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    env_file: .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shipping
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  rasa:
+    image: rasa/rasa:latest
+    volumes:
+      - ./rasa:/app
+    command: run --enable-api --cors "*"
+    ports:
+      - "5005:5005"
+    depends_on:
+      - rasa-actions
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  rasa-actions:
+    image: rasa/rasa-sdk:latest
+    volumes:
+      - ./rasa/actions:/app/actions
+    ports:
+      - "5055:5055"
+
+  twilio-webhook:
+    build:
+      context: ./twilio_webhook
+    env_file: .env
+    ports:
+      - "5001:5001"
+    depends_on:
+      - rasa
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  db_data: 

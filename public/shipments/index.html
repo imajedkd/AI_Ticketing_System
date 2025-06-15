@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Shipping System</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">Admin Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/shipments">Shipment Management</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/track.html">Tracking Page</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2 class="mb-4">Create New Shipment</h2>
+        <form id="shipmentForm" class="row g-3">
+            <!-- Origin Information -->
+            <div class="col-md-6">
+                <h4>Origin Information</h4>
+                <div class="mb-3">
+                    <label for="originAddress" class="form-label">Origin Address</label>
+                    <textarea class="form-control" id="originAddress" rows="3" required></textarea>
+                </div>
+            </div>
+
+            <!-- Destination Information -->
+            <div class="col-md-6">
+                <h4>Destination Information</h4>
+                <div class="mb-3">
+                    <label for="destinationAddress" class="form-label">Destination Address</label>
+                    <textarea class="form-control" id="destinationAddress" rows="3" required></textarea>
+                </div>
+            </div>
+
+            <!-- Package Information -->
+            <div class="col-md-6">
+                <h4>Package Details</h4>
+                <div class="mb-3">
+                    <label for="packageType" class="form-label">Package Type</label>
+                    <select class="form-select" id="packageType" required>
+                        <option value="Small Box">Small Box</option>
+                        <option value="Medium Box">Medium Box</option>
+                        <option value="Large Box">Large Box</option>
+                        <option value="Envelope">Envelope</option>
+                        <option value="Pallet">Pallet</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="weight" class="form-label">Weight (kg)</label>
+                    <input type="number" class="form-control" id="weight" step="0.1" required>
+                </div>
+                <div class="row">
+                    <div class="col-md-4">
+                        <label for="length" class="form-label">Length (cm)</label>
+                        <input type="number" class="form-control" id="length" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="width" class="form-label">Width (cm)</label>
+                        <input type="number" class="form-control" id="width" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="height" class="form-label">Height (cm)</label>
+                        <input type="number" class="form-control" id="height" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipping Options -->
+            <div class="col-md-6">
+                <h4>Shipping Options</h4>
+                <div class="mb-3">
+                    <label for="shippingService" class="form-label">Service Type</label>
+                    <select class="form-select" id="shippingService" required>
+                        <option value="Standard">Standard Delivery</option>
+                        <option value="Express">Express Delivery</option>
+                        <option value="Priority">Priority Delivery</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="signatureRequired">
+                        <label class="form-check-label" for="signatureRequired">
+                            Signature Required
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="specialInstructions" class="form-label">Special Instructions</label>
+                    <textarea class="form-control" id="specialInstructions" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Create Shipment</button>
+            </div>
+        </form>
+
+        <!-- Success Message -->
+        <div id="successAlert" class="alert alert-success mt-3" style="display: none;">
+            Shipment created successfully! Tracking number: <span id="trackingNumber"></span>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorAlert" class="alert alert-danger mt-3" style="display: none;">
+            Error creating shipment. Please try again.
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('shipmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const shipmentData = {
+                origin_address: document.getElementById('originAddress').value,
+                destination_address: document.getElementById('destinationAddress').value,
+                package_type: document.getElementById('packageType').value,
+                weight: parseFloat(document.getElementById('weight').value),
+                dimensions: {
+                    length: parseInt(document.getElementById('length').value),
+                    width: parseInt(document.getElementById('width').value),
+                    height: parseInt(document.getElementById('height').value),
+                    unit: 'cm'
+                },
+                shipping_service: document.getElementById('shippingService').value,
+                signature_required: document.getElementById('signatureRequired').checked,
+                special_instructions: document.getElementById('specialInstructions').value || null,
+                status: 'pending',
+                current_location: document.getElementById('originAddress').value.split(',')[0],
+                delivery_estimate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000) // 5 days from now
+            };
+
+            try {
+                const response = await fetch('/api/shipments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(shipmentData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create shipment');
+                }
+
+                const result = await response.json();
+                
+                // Show success message
+                document.getElementById('trackingNumber').textContent = result.tracking_number;
+                document.getElementById('successAlert').style.display = 'block';
+                document.getElementById('errorAlert').style.display = 'none';
+                
+                // Reset form
+                document.getElementById('shipmentForm').reset();
+            } catch (error) {
+                console.error('Error creating shipment:', error);
+                document.getElementById('errorAlert').style.display = 'block';
+                document.getElementById('successAlert').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 

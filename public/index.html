@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipping Ticket Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .ticket-form {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .table-container {
+            margin-top: 20px;
+        }
+        .status-open {
+            color: #dc3545;
+        }
+        .status-in-progress {
+            color: #ffc107;
+        }
+        .status-resolved {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Shipping Ticket System</h1>
+        
+        <!-- Ticket Creation Form -->
+        <div class="ticket-form">
+            <h3 class="mb-3">Create New Ticket</h3>
+            <form id="ticketForm">
+                <div class="mb-3">
+                    <label for="customerName" class="form-label">Customer Name</label>
+                    <input type="text" class="form-control" id="customerName" required>
+                </div>
+                <div class="mb-3">
+                    <label for="trackingNumber" class="form-label">Tracking Number</label>
+                    <input type="text" class="form-control" id="trackingNumber" required>
+                </div>
+                <div class="mb-3">
+                    <label for="issueDescription" class="form-label">Issue Description</label>
+                    <textarea class="form-control" id="issueDescription" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit Ticket</button>
+            </form>
+        </div>
+
+        <!-- Tickets Table -->
+        <div class="table-container">
+            <h3 class="mb-3">Recent Tickets</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Tracking Number</th>
+                            <th>Issue Description</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketsTableBody">
+                        <!-- Tickets will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to format date
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+
+        // Function to get status CSS class
+        function getStatusClass(status) {
+            switch(status) {
+                case 'open': return 'status-open';
+                case 'in_progress': return 'status-in-progress';
+                case 'resolved': return 'status-resolved';
+                default: return '';
+            }
+        }
+
+        // Function to load tickets
+        async function loadTickets() {
+            try {
+                const response = await fetch('http://localhost:3000/api/tickets');
+                const tickets = await response.json();
+                
+                const tableBody = document.getElementById('ticketsTableBody');
+                tableBody.innerHTML = '';
+                
+                tickets.forEach(ticket => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${ticket.customer_name}</td>
+                        <td>${ticket.tracking_number}</td>
+                        <td>${ticket.issue_description}</td>
+                        <td class="${getStatusClass(ticket.status)}">${ticket.status}</td>
+                        <td>${formatDate(ticket.created_at)}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+                alert('Error loading tickets. Please try again.');
+            }
+        }
+
+        // Function to submit new ticket
+        async function submitTicket(event) {
+            event.preventDefault();
+            
+            const ticketData = {
+                customer_name: document.getElementById('customerName').value,
+                tracking_number: document.getElementById('trackingNumber').value,
+                issue_description: document.getElementById('issueDescription').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/api/tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(ticketData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create ticket');
+                }
+
+                // Clear form
+                document.getElementById('ticketForm').reset();
+                
+                // Reload tickets
+                await loadTickets();
+                
+                alert('Ticket created successfully!');
+            } catch (error) {
+                console.error('Error creating ticket:', error);
+                alert('Error creating ticket. Please try again.');
+            }
+        }
+
+        // Event Listeners
+        document.getElementById('ticketForm').addEventListener('submit', submitTicket);
+
+        // Load tickets on page load
+        loadTickets();
+
+        // Refresh tickets every 30 seconds
+        setInterval(loadTickets, 30000);
+    </script>
+</body>
+</html> 

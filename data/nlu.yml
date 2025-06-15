@@ -1,0 +1,42 @@
+version: "3.1"
+
+nlu:
+- intent: check_shipment_status
+  examples: |
+    - Where is my shipment?
+    - Track my package
+    - Shipment tracking SHIP123456
+    - Check my order
+    - What's the update on my shipment?
+    - تتبع شحنتي
+    - وين شحنتي؟
+    - أبغى أعرف شحنتي وين وصلت
+    - شحنتي وصلت ولا لا؟
+    - اين وصلت شحنتي
+    - متى تصل شحنتي
+    - حالة الشحنة
+
+- intent: create_ticket
+  examples: |
+    - I want to file a complaint
+    - My shipment is delayed
+    - I have a problem with my order
+    - Need to report an issue
+    - Submit a complaint
+    - Report a problem
+    - أريد تقديم شكوى
+    - طلبي تأخر
+    - عندي مشكلة في شحنتي
+    - أبغى أشتكي
+    - الشحنة ما وصلت
+    - تأخرت الشحنة
+    - بلاغ عن مشكلة
+
+- intent: inform
+  examples: |
+    - My tracking number is [SHIP123456](tracking_number)
+    - [ABC789XYZ](tracking_number)
+    - Here's my tracking number [TRACK456789](tracking_number)
+    - رقم التتبع [SHIP123456](tracking_number)
+    - [XYZ987654](tracking_number)
+    - رقم الشحنة [TRACK456789](tracking_number)

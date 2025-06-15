@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shipment Tracking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .tracking-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status-badge {
+            font-size: 1.1em;
+            padding: 8px 16px;
+        }
+        .tracking-timeline {
+            position: relative;
+            margin: 30px 0;
+        }
+        .timeline-item {
+            padding: 20px;
+            border-left: 2px solid #dee2e6;
+            position: relative;
+            margin-left: 20px;
+        }
+        .timeline-item::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            background: #0d6efd;
+            border-radius: 50%;
+            position: absolute;
+            left: -11px;
+            top: 25px;
+        }
+        .timeline-item.active::before {
+            background: #198754;
+        }
+        .package-info {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .search-container {
+            background-color: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .status-pending { background-color: #6c757d; }
+        .status-picked_up { background-color: #0dcaf0; }
+        .status-in_transit { background-color: #0d6efd; }
+        .status-out_for_delivery { background-color: #ffc107; }
+        .status-delivered { background-color: #198754; }
+        .status-failed_delivery { background-color: #dc3545; }
+        .status-returned { background-color: #6610f2; }
+        .status-exception { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="tracking-container">
+            <!-- Search Form -->
+            <div class="search-container text-center">
+                <h1 class="mb-4">Track Your Shipment</h1>
+                <form id="trackingForm" class="d-flex justify-content-center gap-2">
+                    <input type="text" class="form-control form-control-lg" style="max-width: 300px;" 
+                           id="trackingNumber" placeholder="Enter Tracking Number" required>
+                    <button type="submit" class="btn btn-primary btn-lg">Track</button>
+                </form>
+            </div>
+
+            <!-- Shipment Details -->
+            <div id="shipmentDetails" style="display: none;">
+                <!-- Status Overview -->
+                <div class="text-center mb-4">
+                    <span id="statusBadge" class="badge status-badge"></span>
+                </div>
+
+                <!-- Package Information -->
+                <div class="package-info">
+                    <h3 class="mb-3">Shipment Information</h3>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Tracking Number:</strong> <span id="displayTrackingNumber"></span></p>
+                            <p><strong>Service Type:</strong> <span id="serviceType"></span></p>
+                            <p><strong>Package Type:</strong> <span id="packageType"></span></p>
+                            <p><strong>Weight:</strong> <span id="weight"></span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Estimated Delivery:</strong> <span id="estimatedDelivery"></span></p>
+                            <p><strong>Origin:</strong> <span id="origin"></span></p>
+                            <p><strong>Destination:</strong> <span id="destination"></span></p>
+                            <p><strong>Current Location:</strong> <span id="currentLocation"></span></p>
+                        </div>
+                    </div>
+                    <div id="specialInstructions" class="alert alert-info mt-3" style="display: none;"></div>
+                </div>
+
+                <!-- Tracking Timeline -->
+                <h3 class="mb-3">Tracking History</h3>
+                <div id="trackingTimeline" class="tracking-timeline">
+                    <!-- Timeline items will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMessage" class="alert alert-danger" style="display: none;">
+                Shipment not found. Please check the tracking number and try again.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString();
+        }
+
+        function getStatusClass(status) {
+            return `status-${status}`;
+        }
+
+        async function trackShipment(trackingNumber) {
+            try {
+                const response = await fetch(`http://localhost:3000/api/shipments/${trackingNumber}`);
+                if (!response.ok) {
+                    throw new Error('Shipment not found');
+                }
+                
+                const shipment = await response.json();
+                displayShipmentDetails(shipment);
+            } catch (error) {
+                document.getElementById('shipmentDetails').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        function displayShipmentDetails(shipment) {
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('shipmentDetails').style.display = 'block';
+
+            // Update status badge
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = shipment.status.replace(/_/g, ' ').toUpperCase();
+            statusBadge.className = `badge status-badge ${getStatusClass(shipment.status)}`;
+
+            // Update shipment information
+            document.getElementById('displayTrackingNumber').textContent = shipment.tracking_number;
+            document.getElementById('serviceType').textContent = shipment.shipping_service;
+            document.getElementById('packageType').textContent = shipment.package_type;
+            document.getElementById('weight').textContent = shipment.weight ? `${shipment.weight} kg` : 'N/A';
+            document.getElementById('estimatedDelivery').textContent = formatDate(shipment.delivery_estimate);
+            document.getElementById('origin').textContent = shipment.origin_address;
+            document.getElementById('destination').textContent = shipment.destination_address;
+            document.getElementById('currentLocation').textContent = shipment.current_location;
+
+            // Display special instructions if any
+            const specialInstructions = document.getElementById('specialInstructions');
+            if (shipment.special_instructions) {
+                specialInstructions.textContent = shipment.special_instructions;
+                specialInstructions.style.display = 'block';
+            } else {
+                specialInstructions.style.display = 'none';
+            }
+
+            // Update tracking timeline
+            const timelineContainer = document.getElementById('trackingTimeline');
+            timelineContainer.innerHTML = '';
+
+            shipment.tracking_history.forEach((event, index) => {
+                const timelineItem = document.createElement('div');
+                timelineItem.className = `timeline-item ${index === 0 ? 'active' : ''}`;
+                timelineItem.innerHTML = `
+                    <h5>${event.status.replace(/_/g, ' ').toUpperCase()}</h5>
+                    <p class="mb-1">${event.description}</p>
+                    <small class="text-muted">${formatDate(event.timestamp)}</small>
+                `;
+                timelineContainer.appendChild(timelineItem);
+            });
+        }
+
+        document.getElementById('trackingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const trackingNumber = document.getElementById('trackingNumber').value.trim();
+            if (trackingNumber) {
+                trackShipment(trackingNumber);
+            }
+        });
+    </script>
+</body>
+</html> 

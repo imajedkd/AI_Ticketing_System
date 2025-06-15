@@ -1,0 +1,14 @@
+node_modules
+.env
+logs
+*.log
+dist
+__pycache__
+.DS_Store
+.git
+.gitignore
+.dockerignore
+coverage
+*.pyc
+*.pyo
+*.pyd 

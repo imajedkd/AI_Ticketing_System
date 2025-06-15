@@ -1,0 +1,91 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Shipping & Ticketing API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/shipments": {
+      "get": {
+        "summary": "Get all shipments",
+        "responses": {
+          "200": {
+            "description": "A list of shipments"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a shipment",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Shipment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Shipment created"
+          }
+        }
+      }
+    },
+    "/api/tickets": {
+      "get": {
+        "summary": "Get all tickets",
+        "responses": {
+          "200": {
+            "description": "A list of tickets"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a ticket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Ticket"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ticket created"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Shipment": {
+        "type": "object",
+        "properties": {
+          "origin_address": { "type": "string" },
+          "destination_address": { "type": "string" },
+          "package_type": { "type": "string" },
+          "weight": { "type": "number" },
+          "dimensions": { "type": "object" },
+          "shipping_service": { "type": "string" },
+          "signature_required": { "type": "boolean" }
+        },
+        "required": ["origin_address", "destination_address", "package_type", "weight", "shipping_service"]
+      },
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "customer_name": { "type": "string" },
+          "tracking_number": { "type": "string" },
+          "issue_description": { "type": "string" }
+        },
+        "required": ["customer_name", "tracking_number", "issue_description"]
+      }
+    }
+  }
+} 
