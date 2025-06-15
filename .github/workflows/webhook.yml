@@ -1,0 +1,69 @@
+name: Webhook Service CI/CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'webhook/**'
+      - '.github/workflows/webhook.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'webhook/**'
+      - '.github/workflows/webhook.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+        cache-dependency-path: webhook/requirements.txt
+    
+    - name: Install dependencies
+      working-directory: ./webhook
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov flake8
+    
+    - name: Run linting
+      working-directory: ./webhook
+      run: flake8 .
+    
+    - name: Run tests
+      working-directory: ./webhook
+      run: pytest --cov=./ --cov-report=xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./webhook/coverage.xml
+        fail_ci_if_error: true
+    
+    - name: Build Docker image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        docker build -t ${{ github.repository }}/webhook:${{ github.sha }} -f webhook/Dockerfile ./webhook
+    
+    - name: Login to GitHub Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Push Docker image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        docker tag ${{ github.repository }}/webhook:${{ github.sha }} ghcr.io/${{ github.repository }}/webhook:${{ github.sha }}
+        docker tag ${{ github.repository }}/webhook:${{ github.sha }} ghcr.io/${{ github.repository }}/webhook:latest
+        docker push ghcr.io/${{ github.repository }}/webhook:${{ github.sha }}
+        docker push ghcr.io/${{ github.repository }}/webhook:latest 

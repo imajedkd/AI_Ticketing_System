@@ -1,30 +1,55 @@
-name: Build and Deploy
+name: Deploy
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [ main ]
+  workflow_run:
+    workflows: ["Backend CI/CD", "Webhook Service CI/CD", "Rasa CI/CD"]
+    types:
+      - completed
 
 jobs:
-  build-backend:
+  deploy:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-      - run: cd backend && npm install
-      - run: cd backend && npm run lint || true
-      - run: cd backend && npm test || true
-      - run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest ./backend
-      - run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-      - run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/backend:latest
-
-  build-rasa:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/rasa:latest ./rasa
-      - run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-      - run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/rasa:latest 
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Deploy to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: task-definition.json
+        service: ${{ secrets.ECS_SERVICE }}
+        cluster: ${{ secrets.ECS_CLUSTER }}
+        wait-for-service-stability: true
+    
+    - name: Update environment variables
+      run: |
+        aws ssm put-parameter \
+          --name "/ai-ticketing-system/${{ github.sha }}/env" \
+          --value "${{ secrets.ENV_FILE }}" \
+          --type SecureString \
+          --overwrite
+    
+    - name: Notify deployment status
+      if: always()
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_CHANNEL: deployments
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_TITLE: Deployment Status
+        SLACK_MESSAGE: 'Deployment of ${{ github.sha }} to ${{ secrets.ENVIRONMENT }} ${{ job.status }}'
+        SLACK_FOOTER: 'GitHub Actions' 

@@ -1,0 +1,51 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly on Sunday
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+    
+    - name: Run Bandit security linter
+      run: |
+        python -m pip install bandit
+        bandit -r ./backend -f json -o bandit-results.json
+        bandit -r ./webhook -f json -o webhook-bandit-results.json
+        bandit -r ./rasa -f json -o rasa-bandit-results.json
+    
+    - name: Run OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'AI_Ticketing_System'
+        path: '.'
+        format: 'HTML'
+        out: 'reports'
+        args: >
+          --suppression suppression.xml
+          --failOnCVSS 7
+          --enableRetired
+    
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-scan-results
+        path: |
+          reports/
+          bandit-results.json
+          webhook-bandit-results.json
+          rasa-bandit-results.json 
